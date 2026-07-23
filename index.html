@@ -11,12 +11,13 @@
     import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, limit, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyDemoConfigForVibeCodingOnly",
-      authDomain: "vibe-guestbook-demo.firebaseapp.com",
-      projectId: "vibe-guestbook-demo",
-      storageBucket: "vibe-guestbook-demo.appspot.com",
-      messagingSenderId: "1234567890",
-      appId: "1:1234567890:web:demo"
+      apiKey: "AIzaSyAsWBri5jXHVVDRPCZnpryNhMmIcp4xWSk",
+      authDomain: "project-2109503240252587722.firebaseapp.com",
+      projectId: "project-2109503240252587722",
+      storageBucket: "project-2109503240252587722.firebasestorage.app",
+      messagingSenderId: "843744395245",
+      appId: "1:843744395245:web:875876a844dfe4ea4e31e4",
+      measurementId: "G-D0Y1DQH53V"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -349,7 +350,6 @@
       color: #5c423d;
     }
 
-    /* 精緻洗練的 × 刪除按鈕 */
     .admin-delete-btn {
       font-family: var(--main-font);
       background: transparent;
@@ -747,19 +747,17 @@
         messageInput.value = '';
         hideInputModal();
 
-        const customDocId = "user_note_" + Date.now();
-        renderedDocIds.add(customDocId);
-        createStickyNote(customDocId, { nickname, text });
-
         try {
-          if (window.setDoc && window.doc && window.db) {
-            await window.setDoc(window.doc(window.db, "sticky_notes", customDocId), {
+          if (window.addDoc && window.messagesRef) {
+            await window.addDoc(window.messagesRef, {
               nickname: nickname,
               text: text,
               timestamp: window.serverTimestamp()
             });
           }
-        } catch (err) { console.log("雲端同步中..."); }
+        } catch (err) {
+          alert("發布到雲端失敗：" + err.message);
+        }
       }
 
       submitBtn.addEventListener('click', submitNote);
@@ -864,7 +862,7 @@
           await window.deleteDoc(window.doc(window.db, "sticky_notes", docId));
         }
       } catch (err) {
-        console.log("刪除中...");
+        console.log("刪除失敗：" + err.message);
       }
     }
 
