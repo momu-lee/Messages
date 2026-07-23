@@ -167,7 +167,7 @@
       display: none;
       justify-content: center;
       align-items: center;
-      z-index: 1000;
+      z-index: 4000;
       background: rgba(247, 242, 239, 0.80);
       backdrop-filter: blur(12px);
       padding: 16px;
@@ -284,7 +284,6 @@
       border-radius: 10px;
     }
 
-    /* ✨ 電腦版背景設定 (絕對定位隨橫向捲動延伸，絕不跑版) */
     .board-stage {
       position: absolute;
       top: 0;
@@ -314,7 +313,6 @@
       pointer-events: none;
     }
 
-    /* ✨ 手機版獨立設定 (切換為直式滾動與固定背景) */
     @media (max-width: 768px) {
       .viewport {
         overflow-x: hidden;
@@ -343,7 +341,7 @@
         background-color: transparent;
       }
       .board-stage::before {
-        display: none; /* 手機改用 viewport::before 固定 */
+        display: none;
       }
     }
 
@@ -369,6 +367,7 @@
       will-change: transform;
     }
 
+    /* ✨ 柔和珍珠白光圈 */
     .sticky-note.new-paste-flash {
       box-shadow: 0 0 22px rgba(255, 255, 255, 0.95), 0 0 40px rgba(255, 255, 255, 0.7), 0 10px 25px rgba(58, 46, 43, 0.15) !important;
       border-color: #ffffff !important;
@@ -479,7 +478,7 @@
       height: 100svh;
       background: rgba(58, 46, 43, 0.35);
       backdrop-filter: blur(8px);
-      z-index: 2000;
+      z-index: 3000;
       display: none;
       justify-content: center;
       align-items: center;
@@ -499,7 +498,7 @@
       flex-direction: column;
       justify-content: space-between;
       position: relative;
-      z-index: 2001;
+      z-index: 3001;
       transition: background-color 0.2s ease;
     }
 
@@ -564,7 +563,7 @@
       border-radius: 35px;
       cursor: pointer;
       font-size: 15px;
-      z-index: 3000;
+      z-index: 2000;
       box-shadow: 0 8px 20px rgba(139, 90, 82, 0.35);
       display: block; 
     }
@@ -1173,7 +1172,6 @@
               allNotesMap.set(editingDocId, currentData);
 
             } else {
-              const tempId = "temp-" + Date.now();
               const noteData = {
                 nickname: nickname,
                 threads: threads,
@@ -1181,8 +1179,18 @@
                 likes: 0
               };
 
-              renderedDocIds.add(tempId);
-              const element = createStickyNote(tempId, noteData, true);
+              // 🚀 核心修正：直接寫入 Firebase 雲端，利用其回傳的真實 ID 繪製，徹底杜絕雙胞胎
+              const docRef = await window.addDoc(window.messagesRef, {
+                ...noteData,
+                timestamp: window.serverTimestamp()
+              });
+
+              const realId = docRef.id;
+              saveMyNoteToHistory(realId);
+              allNotesMap.set(realId, noteData);
+              renderedDocIds.add(realId);
+
+              const element = createStickyNote(realId, noteData, true);
 
               if (element) {
                 setTimeout(() => {
@@ -1196,32 +1204,10 @@
                     viewport.scrollTo({ left: Math.max(0, noteX - window.innerWidth / 2 + 100), behavior: 'smooth' });
                   }
 
+                  // 點亮白光
                   element.classList.add('new-paste-flash');
                   setTimeout(() => { element.classList.remove('new-paste-flash'); }, 2800);
                 }, 50);
-              }
-
-              const docRef = await window.addDoc(window.messagesRef, {
-                ...noteData,
-                timestamp: window.serverTimestamp()
-              });
-
-              const realId = docRef.id;
-
-              saveMyNoteToHistory(realId);
-              allNotesMap.set(realId, noteData);
-              renderedDocIds.add(realId);
-              renderedDocIds.delete(tempId);
-
-              if (element) {
-                element.id = `note-${realId}`;
-                const editBtn = element.querySelector('.icon-btn-inline[title="編輯"]');
-                const delBtn = element.querySelector('.icon-btn-inline[title="刪除"]');
-                const likeBtn = element.querySelector('.like-btn');
-
-                if (editBtn) editBtn.id = `edit-btn-${realId}`;
-                if (delBtn) delBtn.id = `del-btn-${realId}`;
-                if (likeBtn) likeBtn.id = `like-btn-${realId}`;
               }
             }
 
@@ -1414,11 +1400,6 @@
 
     async function deleteNoteFromCloud(docId) {
       try {
-        if (docId.startsWith('temp-')) {
-          const el = document.getElementById(`note-${docId}`);
-          if (el) el.remove();
-          return;
-        }
         if (window.deleteDoc && window.doc && window.db) {
           await window.deleteDoc(window.doc(window.db, "sticky_notes", docId));
           removeMyNoteFromHistory(docId);
