@@ -200,7 +200,7 @@
     }
     .submit-btn:hover { background: var(--accent-rose-hover); }
 
-    /* ---------------- 階段 2：滾動畫布（電腦水平，手機垂直） ---------------- */
+    /* ---------------- 階段 2：滾動畫布 ---------------- */
     .viewport {
       width: 100vw;
       height: 100svh;
@@ -248,7 +248,7 @@
       pointer-events: none;
     }
 
-    /* 手機版：改為垂直上下滾動、背景圖設定 */
+    /* 手機版：垂直上下滾動、背景圖設定 */
     @media (max-width: 768px) {
       .viewport {
         overflow-x: hidden;
@@ -268,7 +268,7 @@
       }
     }
 
-    /* 便利貼本體 */
+    /* 便利貼本體與浮動動畫 */
     .sticky-note {
       font-family: var(--main-font);
       position: absolute;
@@ -285,13 +285,26 @@
       opacity: 0.92;
       transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
       cursor: pointer;
+      animation: pasteIn 0.5s ease-out forwards, 
+                 smoothRiverFlow 12s ease-in-out infinite alternate;
       user-select: none;
       will-change: transform;
     }
 
+    @keyframes smoothRiverFlow {
+      0% { transform: translate3d(0, 0, 0) rotate(var(--rot)); }
+      50% { transform: translate3d(var(--dx1), var(--dy1), 0) rotate(calc(var(--rot) + 2deg)); }
+      100% { transform: translate3d(var(--dx2), var(--dy2), 0) rotate(calc(var(--rot) - 2deg)); }
+    }
+
+    @keyframes pasteIn {
+      from { opacity: 0; transform: scale(1.2) rotate(calc(var(--rot) + 5deg)); }
+      to { opacity: 0.92; transform: scale(1) rotate(var(--rot)); }
+    }
+
     .sticky-note:hover {
       opacity: 1 !important;
-      transform: scale(1.08);
+      transform: scale(1.08) rotate(0deg) !important;
       z-index: 9999 !important;
       box-shadow: 0 18px 38px rgba(58, 46, 43, 0.22);
     }
@@ -589,12 +602,11 @@
     const renderedDocIds = new Set();
     let currentUnusedSlotsInPage = [];
 
-    // 電腦維持原隨機佈局，手機改為整齊的直式上下排列
+    // 手機版：整齊兩列直式排列；電腦版：隨機漂漂河排版
     function generatePosition(index) {
       const isMobile = window.innerWidth <= 768;
       
       if (isMobile) {
-        // 手機版：每行 2 張，依序往下排，絕不重疊
         const cols = 2;
         const colWidth = window.innerWidth / cols;
         const colIndex = index % cols;
@@ -604,7 +616,6 @@
         const y = rowIndex * (NOTE_HEIGHT + 24) + 30;
         return { x, y };
       } else {
-        // 電腦版維持原本的漂漂河隨機分頁邏輯
         if (currentUnusedSlotsInPage.length === 0) {
           const pageIndex = Math.floor(index / NOTES_PER_PAGE);
           const pageWidth = window.innerWidth;
@@ -671,7 +682,6 @@
         if (e.target === modalOverlay) modalOverlay.style.display = 'none';
       });
 
-      // 電腦滑鼠拖曳水平滾動支援
       let isMouseDown = false, startMouseX = 0, startScrollLeft = 0, velocity = 0, lastX = 0, animationFrameId = null;
 
       function stopInertia() {
@@ -687,7 +697,7 @@
       }
 
       viewport.addEventListener('mousedown', (e) => {
-        if (window.innerWidth <= 768) return; // 手機版直接用原生垂直滾動
+        if (window.innerWidth <= 768) return;
         if (e.target.closest('.sticky-note') || e.target.closest('.re-enter-btn') || e.target.closest('.input-stage') || e.target.closest('.admin-container')) return;
         stopInertia();
         isMouseDown = true;
@@ -827,8 +837,20 @@
         }
       }
 
-      const randomRot = isMobile ? 0 : (Math.random() * 16 - 8).toFixed(1);
-      note.style.transform = `rotate(${randomRot}deg)`;
+      // 恢復動態漂浮動畫參數
+      const randomRot = (Math.random() * 16 - 8).toFixed(1);
+      const dx1 = (Math.random() * 12 - 6).toFixed(0) + 'px';
+      const dy1 = (Math.random() * 12 - 6).toFixed(0) + 'px';
+      const dx2 = (Math.random() * 14 - 7).toFixed(0) + 'px';
+      const dy2 = (Math.random() * 14 - 7).toFixed(0) + 'px';
+      const duration = (Math.random() * 4 + 10).toFixed(1) + 's';
+
+      note.style.setProperty('--rot', `${randomRot}deg`);
+      note.style.setProperty('--dx1', dx1);
+      note.style.setProperty('--dy1', dy1);
+      note.style.setProperty('--dx2', dx2);
+      note.style.setProperty('--dy2', dy2);
+      note.style.animationDuration = `0.5s, ${duration}`;
 
       const nickname = escapeHtml(data.nickname || '無名氏');
       const fullText = escapeHtml(data.text || '');
