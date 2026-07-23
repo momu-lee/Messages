@@ -8,7 +8,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, increment, getDocs, query, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAsWBri5jXHVVDRPCZnpryNhMmIcp4xWSk",
@@ -27,6 +27,8 @@
     window.db = db;
     window.doc = doc;
     window.deleteDoc = deleteDoc;
+    window.updateDoc = updateDoc;
+    window.increment = increment;
     window.messagesRef = messagesRef;
     window.addDoc = addDoc;
     window.getDocs = getDocs;
@@ -56,82 +58,14 @@
       background-color: #f7f2ef;
     }
 
-    /* ---------------- 管理員登入按鈕與小面板 ---------------- */
-    .admin-container {
-      position: fixed;
-      top: 15px;
-      left: 15px;
-      z-index: 1500;
-    }
-
-    .admin-trigger {
-      font-family: var(--main-font);
-      background: rgba(255, 255, 255, 0.7);
-      border: 1px solid #e2d2cc;
-      color: #8b5a52;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-      backdrop-filter: blur(4px);
-      transition: all 0.2s;
-    }
-    .admin-trigger:hover {
-      background: #ffffff;
-      box-shadow: 0 4px 10px rgba(139, 90, 82, 0.2);
-    }
-
-    .admin-login-panel {
-      position: absolute;
-      top: 40px;
-      left: 0;
-      background: #ffffff;
-      border: 1px solid #e2d2cc;
-      padding: 14px;
-      border-radius: 12px;
-      box-shadow: 0 10px 25px rgba(58, 46, 43, 0.15);
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      width: 220px;
-    }
-
-    .admin-login-panel input {
-      font-family: var(--main-font);
-      width: 100%;
-      background: #faf6f5;
-      border: 1px solid #e2d2cc;
-      border-radius: 6px;
-      padding: 8px 10px;
-      font-size: 13px;
-      outline: none;
-    }
-    .admin-login-panel input:focus {
-      border-color: var(--accent-rose);
-    }
-
-    .admin-login-panel button {
-      font-family: var(--main-font);
-      background: var(--accent-rose);
-      color: #fff;
-      border: none;
-      padding: 6px;
-      border-radius: 6px;
-      font-size: 12px;
-      cursor: pointer;
-    }
-    .admin-login-panel button:hover {
-      background: var(--accent-rose-hover);
-    }
-
-    /* ---------------- 階段 1：中央輸入面板 ---------------- */
+    /* ---------------- 階段 1：中央輸入面板（已放大） ---------------- */
     .input-stage {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      display: flex;
+      display: none; /* 預設不顯示，等點按鈕才跳出 */
       justify-content: center;
       align-items: center;
       z-index: 1000;
@@ -142,32 +76,32 @@
     .input-card {
       position: relative;
       width: 90%;
-      max-width: 400px;
+      max-width: 520px; /* 放大卡片最大寬度 */
       background: #ffffff;
-      border: 1px solid #e2d2cc;
-      padding: 28px;
-      border-radius: 20px;
-      box-shadow: 0 20px 40px rgba(139, 90, 82, 0.15);
+      border: 1.5px solid #e2d2cc;
+      padding: 36px 32px; /* 增加內部留白 */
+      border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(139, 90, 82, 0.18);
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 20px; /* 增加欄位間距 */
       color: var(--text-dark);
     }
 
     .close-btn {
       position: absolute;
-      top: 14px;
-      right: 18px;
+      top: 16px;
+      right: 20px;
       background: transparent;
       border: none;
       color: #9c7b74;
-      font-size: 20px;
+      font-size: 22px;
       cursor: pointer;
     }
     .close-btn:hover { color: var(--accent-rose); }
 
     .input-card h1 {
-      font-size: 1.35rem;
+      font-size: 1.5rem; /* 放大標題字體 */
       font-weight: 700;
       text-align: center;
       color: var(--accent-rose);
@@ -179,10 +113,10 @@
       width: 100%;
       background: #faf6f5;
       border: 1.5px solid #e2d2cc;
-      border-radius: 10px;
-      padding: 12px 14px;
+      border-radius: 12px;
+      padding: 14px 16px; /* 增加輸入框內部空間 */
       color: var(--text-dark);
-      font-size: 14px;
+      font-size: 15px; /* 放大輸入字體 */
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
@@ -194,7 +128,7 @@
 
     .input-card textarea {
       resize: none;
-      height: 90px;
+      height: 150px; /* 顯著增加文字輸入區的高度 */
     }
 
     .submit-btn {
@@ -204,10 +138,10 @@
       color: #ffffff;
       font-weight: 600;
       border: none;
-      padding: 12px;
-      border-radius: 10px;
+      padding: 14px;
+      border-radius: 12px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 15px;
       transition: all 0.2s ease;
       margin-top: 4px;
       box-shadow: 0 4px 12px rgba(139, 90, 82, 0.25);
@@ -338,6 +272,26 @@
       color: #5c423d;
     }
 
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .like-btn {
+      font-family: var(--main-font);
+      background: transparent;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      color: #b54545;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      transition: transform 0.2s;
+    }
+    .like-btn:hover { transform: scale(1.2); }
+
     .admin-delete-btn {
       font-family: var(--main-font);
       background: transparent;
@@ -371,10 +325,10 @@
     .modal-card {
       font-family: var(--main-font);
       width: 90%;
-      max-width: 380px;
-      min-height: 200px;
-      padding: 24px;
-      border-radius: 16px;
+      max-width: 420px;
+      min-height: 220px;
+      padding: 28px;
+      border-radius: 18px;
       box-shadow: 0 25px 50px rgba(58, 46, 43, 0.25);
       border: 1.5px solid rgba(255, 255, 255, 0.9);
       display: flex;
@@ -390,7 +344,7 @@
       font-weight: 600;
       line-height: 1.6;
       color: #2b211f;
-      max-height: 280px;
+      max-height: 300px;
       overflow-y: auto;
       word-break: break-word;
       white-space: pre-wrap;
@@ -426,8 +380,8 @@
 
     .modal-close {
       position: absolute;
-      top: 10px;
-      right: 14px;
+      top: 12px;
+      right: 16px;
       background: transparent;
       border: none;
       font-size: 18px;
@@ -435,6 +389,7 @@
       color: #5c423d;
     }
 
+    /* 右下角我要貼一張按鈕 */
     .re-enter-btn {
       font-family: var(--main-font);
       position: fixed;
@@ -450,21 +405,12 @@
       font-size: 13px;
       z-index: 500;
       box-shadow: 0 8px 20px rgba(139, 90, 82, 0.3);
-      display: none;
+      display: block; 
     }
     .re-enter-btn:hover { background: var(--accent-rose-hover); }
   </style>
 </head>
 <body>
-
-  <!-- 左上角管理員按鈕與小面板 -->
-  <div class="admin-container">
-    <button class="admin-trigger" id="adminTriggerBtn">🔒 管理員登入</button>
-    <div class="admin-login-panel" id="adminLoginPanel">
-      <input type="password" id="adminPasswordInput" placeholder="請輸入管理員密碼..." />
-      <button id="adminSubmitBtn">確認登入</button>
-    </div>
-  </div>
 
   <!-- 1. 輸入面板 -->
   <div class="input-stage" id="inputStage">
@@ -498,6 +444,11 @@
 
   <script type="module">
     let lastHue = null;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === 'true') {
+      localStorage.setItem('isAdminUnlocked', 'true');
+    }
     let isAdmin = localStorage.getItem('isAdminUnlocked') === 'true';
 
     function generateDynamicMorandiColor() {
@@ -571,83 +522,17 @@
       const reEnterBtn = document.getElementById('reEnterBtn');
       const closeBtn = document.getElementById('closeBtn');
 
-      const adminTriggerBtn = document.getElementById('adminTriggerBtn');
-      const adminLoginPanel = document.getElementById('adminLoginPanel');
-      const adminPasswordInput = document.getElementById('adminPasswordInput');
-      const adminSubmitBtn = document.getElementById('adminSubmitBtn');
-
       const modalOverlay = document.getElementById('modalOverlay');
       const modalCloseBtn = document.getElementById('modalCloseBtn');
       const modalDeleteBtn = document.getElementById('modalDeleteBtn');
       const viewport = document.getElementById('viewport');
 
-      updateAdminUI();
-
-      adminTriggerBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (isAdmin) {
-          if (confirm("要登出管理員身份嗎？")) {
-            isAdmin = false;
-            localStorage.removeItem('isAdminUnlocked');
-            updateAdminUI();
-            location.reload();
-          }
-        } else {
-          adminLoginPanel.style.display = adminLoginPanel.style.display === 'flex' ? 'none' : 'flex';
-          adminPasswordInput.focus();
-        }
-      });
-
-      adminSubmitBtn.addEventListener('click', () => {
-        processLogin(adminPasswordInput.value);
-      });
-
-      adminPasswordInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          processLogin(adminPasswordInput.value);
-        }
-      });
-
-      document.addEventListener('click', (e) => {
-        if (!adminLoginPanel.contains(e.target) && e.target !== adminTriggerBtn) {
-          adminLoginPanel.style.display = 'none';
-        }
-      });
-
-      function processLogin(pwd) {
-        if (pwd === "admin123") {
-          isAdmin = true;
-          localStorage.setItem('isAdminUnlocked', 'true');
-          adminLoginPanel.style.display = 'none';
-          updateAdminUI();
-          location.reload();
-        } else {
-          alert("密碼錯誤！");
-          adminPasswordInput.value = '';
-          adminPasswordInput.focus();
-        }
-      }
-
-      function updateAdminUI() {
-        if (isAdmin) {
-          adminTriggerBtn.innerText = "🔓 管理員已解鎖 (點擊登出)";
-          adminTriggerBtn.style.background = "#8b5a52";
-          adminTriggerBtn.style.color = "#ffffff";
-        } else {
-          adminTriggerBtn.innerText = "🔒 管理員登入";
-          adminTriggerBtn.style.background = "rgba(255, 255, 255, 0.7)";
-          adminTriggerBtn.style.color = "#8b5a52";
-        }
-      }
-
       function hideInputModal() {
         inputStage.style.display = 'none';
-        reEnterBtn.style.display = 'block';
       }
 
       function showInputModal() {
         inputStage.style.display = 'flex';
-        reEnterBtn.style.display = 'none';
         nicknameInput.focus();
       }
 
@@ -656,7 +541,6 @@
         if (e.target === modalOverlay) modalOverlay.style.display = 'none';
       });
 
-      // 物理滑動
       let isMouseDown = false, startMouseX = 0, startScrollLeft = 0, velocity = 0, lastX = 0, animationFrameId = null;
 
       function stopInertia() {
@@ -672,7 +556,7 @@
       }
 
       viewport.addEventListener('mousedown', (e) => {
-        if (e.target.closest('.sticky-note') || e.target.closest('.re-enter-btn') || e.target.closest('.input-stage') || e.target.closest('.admin-container')) return;
+        if (e.target.closest('.sticky-note') || e.target.closest('.re-enter-btn') || e.target.closest('.input-stage')) return;
         stopInertia();
         isMouseDown = true;
         startMouseX = e.pageX;
@@ -701,7 +585,6 @@
         if (e.deltaY !== 0) viewport.scrollLeft += e.deltaY;
       }, { passive: true });
 
-      // 即時同步雲端資料（免索引查詢）
       const q = window.query(window.messagesRef, window.limit(100));
       
       window.getDocs(q).then((querySnapshot) => {
@@ -723,6 +606,13 @@
             if (!renderedDocIds.has(docId)) {
               renderedDocIds.add(docId);
               createStickyNote(docId, change.doc.data());
+            }
+          }
+          if (change.type === "modified") {
+            const data = change.doc.data();
+            const countEl = document.getElementById(`like-count-${docId}`);
+            if (countEl) {
+              countEl.innerText = data.likes || 0;
             }
           }
           if (change.type === "removed") {
@@ -752,6 +642,7 @@
             await window.addDoc(window.messagesRef, {
               nickname: nickname,
               text: text,
+              likes: 0,
               timestamp: window.serverTimestamp()
             });
             nicknameInput.value = '';
@@ -810,8 +701,7 @@
 
       const nickname = escapeHtml(data.nickname || '無名氏');
       const fullText = escapeHtml(data.text || '');
-
-      const isAdmin = localStorage.getItem('isAdminUnlocked') === 'true';
+      const likesCount = data.likes || 0;
 
       note.innerHTML = `
         <div>
@@ -820,7 +710,10 @@
         </div>
         <div class="footer-row">
           <div class="sticky-author">— ${nickname}</div>
-          <button class="admin-delete-btn" id="del-btn-${docId}" style="display: ${isAdmin ? 'block' : 'none'};">×</button>
+          <div class="action-group">
+            <button class="like-btn" id="like-btn-${docId}">💗 <span id="like-count-${docId}">${likesCount}</span></button>
+            <button class="admin-delete-btn" id="del-btn-${docId}" style="display: ${isAdmin ? 'block' : 'none'};">×</button>
+          </div>
         </div>
       `;
 
@@ -833,6 +726,19 @@
           indicatorEl.style.display = 'block';
         }
       }, 50);
+
+      const likeBtn = document.getElementById(`like-btn-${docId}`);
+      likeBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        try {
+          const noteRef = window.doc(window.db, "sticky_notes", docId);
+          await window.updateDoc(noteRef, {
+            likes: window.increment(1)
+          });
+        } catch (err) {
+          console.log("按愛心失敗：" + err.message);
+        }
+      });
 
       const delBtn = document.getElementById(`del-btn-${docId}`);
       if (delBtn) {
@@ -852,7 +758,7 @@
         modalAuthor.innerText = `— ${nickname}`;
         modalDeleteBtn.dataset.currentId = docId;
 
-        if (localStorage.getItem('isAdminUnlocked') === 'true') {
+        if (isAdmin) {
           modalDeleteBtn.style.display = 'block';
         } else {
           modalDeleteBtn.style.display = 'none';
