@@ -367,7 +367,6 @@
       will-change: transform;
     }
 
-    /* ✨ 柔和珍珠白光圈 */
     .sticky-note.new-paste-flash {
       box-shadow: 0 0 22px rgba(255, 255, 255, 0.95), 0 0 40px rgba(255, 255, 255, 0.7), 0 10px 25px rgba(58, 46, 43, 0.15) !important;
       border-color: #ffffff !important;
@@ -1179,7 +1178,6 @@
                 likes: 0
               };
 
-              // 🚀 核心修正：直接寫入 Firebase 雲端，利用其回傳的真實 ID 繪製，徹底杜絕雙胞胎
               const docRef = await window.addDoc(window.messagesRef, {
                 ...noteData,
                 timestamp: window.serverTimestamp()
@@ -1204,7 +1202,6 @@
                     viewport.scrollTo({ left: Math.max(0, noteX - window.innerWidth / 2 + 100), behavior: 'smooth' });
                   }
 
-                  // 點亮白光
                   element.classList.add('new-paste-flash');
                   setTimeout(() => { element.classList.remove('new-paste-flash'); }, 2800);
                 }, 50);
@@ -1235,10 +1232,15 @@
       const boardStage = document.getElementById('boardStage');
       if (!boardStage) return null;
 
-      let note = document.getElementById(`note-${docId}`);
-      if (note) return note;
+      // 🛡️ 絕對防護網：若畫面上或已渲染紀錄中有這張 ID，直接終止，絕不重複建立！
+      let existingNote = document.getElementById(`note-${docId}`);
+      if (existingNote || renderedDocIds.has(docId)) {
+        if (existingNote) return existingNote;
+      }
 
-      note = document.createElement('div');
+      renderedDocIds.add(docId);
+
+      let note = document.createElement('div');
       note.className = 'sticky-note';
       note.id = `note-${docId}`;
 
@@ -1318,7 +1320,6 @@
         likeBtn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const targetId = note.id.replace('note-', '');
-          if (targetId.startsWith('temp-')) return;
           try {
             const noteRef = window.doc(window.db, "sticky_notes", targetId);
             await window.updateDoc(noteRef, { likes: window.increment(1) });
