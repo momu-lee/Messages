@@ -44,6 +44,7 @@
       --text-dark: #3a2e2b;
       --accent-rose: #8b5a52;
       --accent-rose-hover: #a36d64;
+      --error-red: #d90429;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -136,7 +137,7 @@
       box-shadow: 0 25px 50px rgba(139, 90, 82, 0.18);
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
       color: var(--text-dark);
     }
 
@@ -159,6 +160,22 @@
       text-align: center;
       color: var(--accent-rose);
       font-family: var(--main-font);
+      margin-bottom: 4px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .error-msg {
+      color: var(--error-red);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 3px;
+      display: none;
+      text-align: left;
     }
 
     .input-card input, .input-card textarea {
@@ -169,7 +186,7 @@
       border-radius: 12px;
       padding: 12px 14px;
       color: var(--text-dark);
-      font-size: 15px;
+      font-size: 14px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
@@ -181,7 +198,7 @@
 
     .input-card textarea {
       resize: none;
-      height: 130px;
+      height: 110px;
     }
 
     .submit-btn {
@@ -197,6 +214,7 @@
       font-size: 15px;
       transition: all 0.2s ease;
       box-shadow: 0 4px 12px rgba(139, 90, 82, 0.25);
+      margin-top: 4px;
     }
     .submit-btn:hover { background: var(--accent-rose-hover); }
 
@@ -231,7 +249,6 @@
       background-color: #f7f2ef;
     }
 
-    /* 電腦版背景圖 */
     .board-stage::before {
       content: "";
       position: absolute;
@@ -248,7 +265,6 @@
       pointer-events: none;
     }
 
-    /* 手機版背景圖（直式上下滾動，背景使用對應圖片） */
     @media (max-width: 768px) {
       .viewport {
         overflow-x: hidden;
@@ -344,6 +360,10 @@
       font-size: 11px;
       font-weight: 700;
       color: #5c423d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
     }
 
     .action-group {
@@ -363,7 +383,9 @@
       align-items: center;
       gap: 2px;
       padding: 2px;
+      transition: transform 0.2s;
     }
+    .like-btn:hover { transform: scale(1.15); }
 
     .admin-delete-btn {
       font-family: var(--main-font);
@@ -408,7 +430,7 @@
       justify-content: space-between;
       position: relative;
       z-index: 2001;
-      background: #fff;
+      transition: background-color 0.2s ease;
     }
 
     .modal-text {
@@ -436,6 +458,27 @@
       font-weight: 700;
       color: #5c423d;
     }
+
+    .modal-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-like-btn {
+      font-family: var(--main-font);
+      background: transparent;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+      color: #b54545;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 4px;
+      transition: transform 0.2s;
+    }
+    .modal-like-btn:hover { transform: scale(1.15); }
 
     .modal-delete-btn {
       font-family: var(--main-font);
@@ -496,8 +539,22 @@
     <div class="input-card">
       <button class="close-btn" id="closeBtn">✕</button>
       <h1>✍️ 寫一張玫瑰花園漂漂河</h1>
-      <input type="text" id="nickname" placeholder="你的暱稱..." maxlength="12" />
-      <textarea id="message" placeholder="寫下一句話..."></textarea>
+      
+      <div class="field-group">
+        <div class="error-msg" id="nicknameErr">請輸入暱稱!</div>
+        <input type="text" id="nickname" placeholder="暱稱..." maxlength="12" />
+      </div>
+
+      <div class="field-group">
+        <div class="error-msg" id="threadsErr">請輸入Threads帳號!</div>
+        <input type="text" id="threads" placeholder="Threads帳號..." maxlength="30" />
+      </div>
+
+      <div class="field-group">
+        <div class="error-msg" id="messageErr">請輸入想說的話!</div>
+        <textarea id="message" placeholder="想說的話..."></textarea>
+      </div>
+
       <button class="submit-btn" id="submitBtn">送出便利貼</button>
     </div>
   </div>
@@ -514,7 +571,10 @@
       <div class="modal-text" id="modalText"></div>
       <div class="modal-footer">
         <div class="modal-author" id="modalAuthor"></div>
-        <button class="modal-delete-btn" id="modalDeleteBtn">×</button>
+        <div class="modal-actions">
+          <button class="modal-like-btn" id="modalLikeBtn">💗 <span id="modalLikeCount">0</span></button>
+          <button class="modal-delete-btn" id="modalDeleteBtn">×</button>
+        </div>
       </div>
     </div>
   </div>
@@ -657,7 +717,13 @@
     function initApp() {
       const inputStage = document.getElementById('inputStage');
       const nicknameInput = document.getElementById('nickname');
+      const threadsInput = document.getElementById('threads');
       const messageInput = document.getElementById('message');
+      
+      const nicknameErr = document.getElementById('nicknameErr');
+      const threadsErr = document.getElementById('threadsErr');
+      const messageErr = document.getElementById('messageErr');
+
       const submitBtn = document.getElementById('submitBtn');
       const reEnterBtn = document.getElementById('reEnterBtn');
       const closeBtn = document.getElementById('closeBtn');
@@ -665,14 +731,23 @@
       const modalOverlay = document.getElementById('modalOverlay');
       const modalCloseBtn = document.getElementById('modalCloseBtn');
       const modalDeleteBtn = document.getElementById('modalDeleteBtn');
+      const modalLikeBtn = document.getElementById('modalLikeBtn');
       const viewport = document.getElementById('viewport');
+
+      function clearErrors() {
+        nicknameErr.style.display = 'none';
+        threadsErr.style.display = 'none';
+        messageErr.style.display = 'none';
+      }
 
       function hideInputModal() {
         inputStage.style.display = 'none';
+        clearErrors();
       }
 
       function showInputModal() {
         inputStage.style.display = 'flex';
+        clearErrors();
         nicknameInput.focus();
       }
 
@@ -681,38 +756,78 @@
         if (e.target === modalOverlay) modalOverlay.style.display = 'none';
       });
 
-      let isMouseDown = false, startMouseX = 0, startScrollLeft = 0, velocity = 0, lastX = 0, animationFrameId = null;
+      modalLikeBtn.addEventListener('click', async () => {
+        const docId = modalLikeBtn.dataset.currentId;
+        if (docId) {
+          try {
+            const noteRef = window.doc(window.db, "sticky_notes", docId);
+            await window.updateDoc(noteRef, {
+              likes: window.increment(1)
+            });
+          } catch (err) {
+            console.log("彈窗按愛心失敗：" + err.message);
+          }
+        }
+      });
+
+      // 通用拖曳/滾動邏輯（電腦水平滑動，手機垂直滑動）
+      let isMouseDown = false;
+      let startX = 0, startY = 0;
+      let startScrollLeft = 0, startScrollTop = 0;
+      let velocityX = 0, velocityY = 0;
+      let lastX = 0, lastY = 0;
+      let animationFrameId = null;
 
       function stopInertia() {
         if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
       }
 
       function applyInertia() {
-        if (Math.abs(velocity) > 0.5) {
-          viewport.scrollLeft -= velocity;
-          velocity *= 0.92;
-          animationFrameId = requestAnimationFrame(applyInertia);
-        } else { velocity = 0; }
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          if (Math.abs(velocityY) > 0.5) {
+            viewport.scrollTop -= velocityY;
+            velocityY *= 0.92;
+            animationFrameId = requestAnimationFrame(applyInertia);
+          } else { velocityY = 0; }
+        } else {
+          if (Math.abs(velocityX) > 0.5) {
+            viewport.scrollLeft -= velocityX;
+            velocityX *= 0.92;
+            animationFrameId = requestAnimationFrame(applyInertia);
+          } else { velocityX = 0; }
+        }
       }
 
       viewport.addEventListener('mousedown', (e) => {
-        if (window.innerWidth <= 768) return;
         if (e.target.closest('.sticky-note') || e.target.closest('.re-enter-btn') || e.target.closest('.input-stage') || e.target.closest('.admin-container')) return;
         stopInertia();
         isMouseDown = true;
-        startMouseX = e.pageX;
+        startX = e.pageX;
+        startY = e.pageY;
         lastX = e.pageX;
+        lastY = e.pageY;
         startScrollLeft = viewport.scrollLeft;
-        velocity = 0;
+        startScrollTop = viewport.scrollTop;
+        velocityX = 0;
+        velocityY = 0;
       });
 
       window.addEventListener('mousemove', (e) => {
-        if (!isMouseDown || window.innerWidth <= 768) return;
+        if (!isMouseDown) return;
         e.preventDefault();
-        const currentX = e.pageX;
-        viewport.scrollLeft = startScrollLeft - (currentX - startMouseX);
-        velocity = currentX - lastX;
-        lastX = currentX;
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          const currentY = e.pageY;
+          viewport.scrollTop = startScrollTop - (currentY - startY);
+          velocityY = currentY - lastY;
+          lastY = currentY;
+        } else {
+          const currentX = e.pageX;
+          viewport.scrollLeft = startScrollLeft - (currentX - startX);
+          velocityX = currentX - lastX;
+          lastX = currentX;
+        }
       });
 
       window.addEventListener('mouseup', () => {
@@ -722,8 +837,11 @@
       });
 
       viewport.addEventListener('wheel', (e) => {
-        if (window.innerWidth > 768) {
-          stopInertia();
+        stopInertia();
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          if (e.deltaY !== 0) viewport.scrollTop += e.deltaY;
+        } else {
           if (e.deltaY !== 0) viewport.scrollLeft += e.deltaY;
         }
       }, { passive: true });
@@ -757,6 +875,11 @@
             if (countEl) {
               countEl.innerText = data.likes || 0;
             }
+            const modalLikeBtn = document.getElementById('modalLikeBtn');
+            const modalLikeCount = document.getElementById('modalLikeCount');
+            if (modalOverlay.style.display === 'flex' && modalLikeBtn.dataset.currentId === docId) {
+              modalLikeCount.innerText = data.likes || 0;
+            }
           }
           if (change.type === "removed") {
             renderedDocIds.delete(docId);
@@ -770,12 +893,27 @@
       });
 
       async function submitNote() {
+        clearErrors();
         const nickname = nicknameInput.value.trim();
+        const threads = threadsInput.value.trim();
         const text = messageInput.value.trim();
-        if (!nickname || !text) {
-          alert("請填寫暱稱與內容！");
-          return;
+
+        let hasError = false;
+
+        if (!nickname) {
+          nicknameErr.style.display = 'block';
+          hasError = true;
         }
+        if (!threads) {
+          threadsErr.style.display = 'block';
+          hasError = true;
+        }
+        if (!text) {
+          messageErr.style.display = 'block';
+          hasError = true;
+        }
+
+        if (hasError) return;
 
         submitBtn.innerText = "傳送中...";
         submitBtn.disabled = true;
@@ -784,16 +922,18 @@
           if (window.addDoc && window.messagesRef) {
             await window.addDoc(window.messagesRef, {
               nickname: nickname,
+              threads: threads,
               text: text,
               likes: 0,
               timestamp: window.serverTimestamp()
             });
             nicknameInput.value = '';
+            threadsInput.value = '';
             messageInput.value = '';
             hideInputModal();
           }
         } catch (err) {
-          alert("發布到雲端失敗：" + err.message);
+          console.log("發布失敗：" + err.message);
         } finally {
           submitBtn.innerText = "送出便利貼";
           submitBtn.disabled = false;
@@ -851,8 +991,11 @@
       note.style.animationDuration = `0.5s, ${duration}`;
 
       const nickname = escapeHtml(data.nickname || '無名氏');
+      const threads = escapeHtml(data.threads || '');
       const fullText = escapeHtml(data.text || '');
       const likesCount = data.likes || 0;
+
+      const authorText = (isAdmin && threads) ? `— ${nickname} (@${threads})` : `— ${nickname}`;
 
       note.innerHTML = `
         <div>
@@ -860,7 +1003,7 @@
           <div class="more-indicator" id="indicator-${docId}" style="display:none;">[...more]</div>
         </div>
         <div class="footer-row">
-          <div class="sticky-author">— ${nickname}</div>
+          <div class="sticky-author" title="${authorText}">${authorText}</div>
           <div class="action-group">
             <button class="like-btn" id="like-btn-${docId}">💗 <span id="like-count-${docId}">${likesCount}</span></button>
             <button class="admin-delete-btn" id="del-btn-${docId}" style="display: ${isAdmin ? 'block' : 'none'};">×</button>
@@ -901,13 +1044,21 @@
 
       note.addEventListener('click', () => {
         const modalOverlay = document.getElementById('modalOverlay');
+        const modalCard = document.getElementById('modalCard');
         const modalText = document.getElementById('modalText');
         const modalAuthor = document.getElementById('modalAuthor');
         const modalDeleteBtn = document.getElementById('modalDeleteBtn');
+        const modalLikeBtn = document.getElementById('modalLikeBtn');
+        const modalLikeCount = document.getElementById('modalLikeCount');
         
+        modalCard.style.backgroundColor = randomColor;
+
         modalText.innerText = data.text || '';
-        modalAuthor.innerText = `— ${nickname}`;
+        modalAuthor.innerText = (isAdmin && data.threads) ? `— ${nickname} (@${escapeHtml(data.threads)})` : `— ${nickname}`;
+        modalLikeCount.innerText = data.likes || 0;
+
         modalDeleteBtn.dataset.currentId = docId;
+        modalLikeBtn.dataset.currentId = docId;
 
         if (isAdmin) {
           modalDeleteBtn.style.display = 'block';
