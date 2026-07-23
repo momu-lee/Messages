@@ -8,7 +8,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, limit, onSnapshot, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAsWBri5jXHVVDRPCZnpryNhMmIcp4xWSk",
@@ -26,7 +26,6 @@
 
     window.db = db;
     window.doc = doc;
-    window.setDoc = setDoc;
     window.deleteDoc = deleteDoc;
     window.messagesRef = messagesRef;
     window.addDoc = addDoc;
@@ -290,17 +289,6 @@
       100% { transform: translate3d(var(--dx2), var(--dy2), 0) rotate(calc(var(--rot) - 2deg)); }
     }
 
-    .sticky-note.my-new-note {
-      opacity: 1 !important;
-      z-index: 9999 !important;
-      animation: focusGoldenGlow 1.2s ease-in-out infinite alternate !important;
-    }
-
-    @keyframes focusGoldenGlow {
-      0% { transform: scale(1.18) rotate(0deg); box-shadow: 0 0 35px rgba(233, 196, 106, 0.95); }
-      100% { transform: scale(1.05) rotate(0deg); box-shadow: 0 0 15px rgba(233, 196, 106, 0.5); }
-    }
-
     @keyframes pasteIn {
       from { opacity: 0; transform: scale(1.2) rotate(calc(var(--rot) + 5deg)); }
       to { opacity: 0.92; transform: scale(1) rotate(var(--rot)); }
@@ -469,7 +457,7 @@
 </head>
 <body>
 
-  <!-- 左上角管理員按鈕與內嵌面板 -->
+  <!-- 左上角管理員按鈕與小面板 -->
   <div class="admin-container">
     <button class="admin-trigger" id="adminTriggerBtn">🔒 管理員登入</button>
     <div class="admin-login-panel" id="adminLoginPanel">
@@ -733,6 +721,8 @@
             }
           }
         });
+      }, (error) => {
+        console.error("雲端同步監聽錯誤: ", error);
       });
 
       async function submitNote() {
@@ -743,9 +733,8 @@
           return;
         }
 
-        nicknameInput.value = '';
-        messageInput.value = '';
-        hideInputModal();
+        submitBtn.innerText = "傳送中...";
+        submitBtn.disabled = true;
 
         try {
           if (window.addDoc && window.messagesRef) {
@@ -754,9 +743,17 @@
               text: text,
               timestamp: window.serverTimestamp()
             });
+            nicknameInput.value = '';
+            messageInput.value = '';
+            hideInputModal();
+          } else {
+            alert("資料庫尚未準備好，請重新整理頁面再試一次！");
           }
         } catch (err) {
           alert("發布到雲端失敗：" + err.message);
+        } finally {
+          submitBtn.innerText = "送出便利貼";
+          submitBtn.disabled = false;
         }
       }
 
@@ -767,6 +764,8 @@
 
     function createStickyNote(docId, data) {
       const boardStage = document.getElementById('boardStage');
+      if (!boardStage) return;
+
       const note = document.createElement('div');
       note.className = 'sticky-note';
       note.id = `note-${docId}`;
