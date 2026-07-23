@@ -8,7 +8,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAsWBri5jXHVVDRPCZnpryNhMmIcp4xWSk",
@@ -29,6 +29,7 @@
     window.deleteDoc = deleteDoc;
     window.messagesRef = messagesRef;
     window.addDoc = addDoc;
+    window.getDocs = getDocs;
     window.query = query;
     window.orderBy = orderBy;
     window.limit = limit;
@@ -701,8 +702,21 @@
         if (e.deltaY !== 0) viewport.scrollLeft += e.deltaY;
       }, { passive: true });
 
-      // 即時同步雲端資料
+      // 即時同步雲端資料（加上備用直接讀取，確保重整一定看得到）
       const q = window.query(window.messagesRef, window.orderBy("timestamp", "asc"), window.limit(100));
+      
+      window.getDocs(q).then((querySnapshot) => {
+        querySnapshot.forEach((docSnap) => {
+          const docId = docSnap.id;
+          if (!renderedDocIds.has(docId)) {
+            renderedDocIds.add(docId);
+            createStickyNote(docId, docSnap.data());
+          }
+        });
+      }).catch((err) => {
+        console.log("初始化載入中...");
+      });
+
       window.onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
           const docId = change.doc.id;
@@ -721,8 +735,6 @@
             }
           }
         });
-      }, (error) => {
-        console.error("雲端同步監聽錯誤: ", error);
       });
 
       async function submitNote() {
@@ -746,8 +758,6 @@
             nicknameInput.value = '';
             messageInput.value = '';
             hideInputModal();
-          } else {
-            alert("資料庫尚未準備好，請重新整理頁面再試一次！");
           }
         } catch (err) {
           alert("發布到雲端失敗：" + err.message);
