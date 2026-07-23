@@ -8,7 +8,7 @@
   <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, getDocs, query, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAsWBri5jXHVVDRPCZnpryNhMmIcp4xWSk",
@@ -31,7 +31,6 @@
     window.addDoc = addDoc;
     window.getDocs = getDocs;
     window.query = query;
-    window.orderBy = orderBy;
     window.limit = limit;
     window.onSnapshot = onSnapshot;
     window.serverTimestamp = serverTimestamp;
@@ -702,8 +701,8 @@
         if (e.deltaY !== 0) viewport.scrollLeft += e.deltaY;
       }, { passive: true });
 
-      // 即時同步雲端資料
-      const q = window.query(window.messagesRef, window.orderBy("timestamp", "asc"), window.limit(100));
+      // 即時同步雲端資料（免索引查詢）
+      const q = window.query(window.messagesRef, window.limit(100));
       
       window.getDocs(q).then((querySnapshot) => {
         querySnapshot.forEach((docSnap) => {
