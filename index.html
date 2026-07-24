@@ -601,7 +601,7 @@
         <textarea id="message" placeholder="想說的話..."></textarea>
       </div>
 
-      <button class="submit-btn" id="submitBtn">送出便利貼</button>
+      <button class="submit-btn" id="submitBtn">送出</button>
     </div>
   </div>
 
@@ -635,8 +635,10 @@
     let isAdmin = localStorage.getItem('isAdminUnlocked') === 'true';
     let editingDocId = null; 
     let allNotesMap = new Map();
-    // 🛡️ 防重複與 15 分鐘機制用的本機暫時 ID 紀錄
+    // 🛡️ 嚴格鎖定本機剛送出的暫時 ID，防止雲端監聽器重複渲染
     let recentLocalIds = new Set();
+    // 記錄自己剛送出文字的內容特徵，防止重複內容被當作新卡片重複建立
+    let recentSubmittedTexts = new Set();
 
     function getMyNotesHistory() {
       try {
@@ -926,7 +928,7 @@
         editingDocId = null;
 
         inputStageTitle.innerText = "✍️ 留下你想說的任何話";
-        submitBtn.innerText = "送出便利貼";
+        submitBtn.innerText = "送出";
         nicknameInput.value = '';
         threadsInput.value = '';
         messageInput.value = '';
@@ -1069,7 +1071,11 @@
           const data = change.doc.data();
 
           if (change.type === "added") {
-            if (recentLocalIds.has(docId)) return;
+            // 🛡️ 嚴格防重複：如果剛才本機已經送出並暫時渲染過，或是內容特徵符合剛送出的卡片，直接略過雲端回傳的重複新增
+            const textKey = `${data.nickname}_${data.threads}_${data.text}`;
+            if (recentLocalIds.has(docId) || recentSubmittedTexts.has(textKey)) {
+              return;
+            }
             if (renderedDocIds.has(docId)) return;
 
             allNotesMap.set(docId, data);
@@ -1168,6 +1174,10 @@
                 likes: 0
               };
 
+              const textKey = `${nickname}_${threads}_${text}`;
+              recentSubmittedTexts.add(textKey);
+              setTimeout(() => { recentSubmittedTexts.delete(textKey); }, 5000);
+
               const tempId = 'local-' + Date.now();
               recentLocalIds.add(tempId);
               saveMyNoteToHistory(tempId);
@@ -1224,7 +1234,7 @@
               setTimeout(() => {
                 recentLocalIds.delete(tempId);
                 recentLocalIds.delete(realId);
-              }, 2000);
+              }, 4000);
             }
 
             nicknameInput.value = '';
@@ -1237,7 +1247,7 @@
         } catch (err) {
           console.log("操作失敗：" + err.message);
         } finally {
-          submitBtn.innerText = "送出便利貼";
+          submitBtn.innerText = "送出";
           submitBtn.disabled = false;
         }
       }
