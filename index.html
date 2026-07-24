@@ -285,7 +285,7 @@
       border-radius: 10px;
     }
 
-    /* 🖼️ 把背景直接固定在整個 viewport 底部，完全不使用 repeat-x 或隨滾動位移，徹底解決滑過去變白/破圖的問題！ */
+    /* 🖼️ 電腦版背景圖：完全定格、單張不重複、滑過去絕不變白 */
     .viewport::before {
       content: "";
       position: fixed;
@@ -315,6 +315,7 @@
       z-index: 1;
     }
 
+    /* 📱 手機版背景圖：完全定格、單張不重複 */
     @media (max-width: 768px) {
       .viewport {
         overflow-x: hidden;
@@ -634,6 +635,8 @@
     let isAdmin = localStorage.getItem('isAdminUnlocked') === 'true';
     let editingDocId = null; 
     let allNotesMap = new Map();
+    // 🛡️ 防重複與 15 分鐘機制用的本機暫時 ID 紀錄
+    let recentLocalIds = new Set();
 
     function getMyNotesHistory() {
       try {
@@ -1066,6 +1069,7 @@
           const data = change.doc.data();
 
           if (change.type === "added") {
+            if (recentLocalIds.has(docId)) return;
             if (renderedDocIds.has(docId)) return;
 
             allNotesMap.set(docId, data);
@@ -1164,17 +1168,12 @@
                 likes: 0
               };
 
-              const docRef = await window.addDoc(window.messagesRef, {
-                ...noteData,
-                timestamp: window.serverTimestamp()
-              });
-
-              const realId = docRef.id;
-              saveMyNoteToHistory(realId);
-
-              allNotesMap.set(realId, noteData);
-              renderedDocIds.add(realId);
-              const element = createStickyNote(realId, noteData, true);
+              const tempId = 'local-' + Date.now();
+              recentLocalIds.add(tempId);
+              saveMyNoteToHistory(tempId);
+              allNotesMap.set(tempId, noteData);
+              renderedDocIds.add(tempId);
+              const element = createStickyNote(tempId, noteData, true);
 
               if (element) {
                 setTimeout(() => {
@@ -1192,6 +1191,40 @@
                   setTimeout(() => { element.classList.remove('new-paste-flash'); }, 2800);
                 }, 50);
               }
+
+              const docRef = await window.addDoc(window.messagesRef, {
+                ...noteData,
+                timestamp: window.serverTimestamp()
+              });
+
+              const realId = docRef.id;
+              recentLocalIds.add(realId);
+              saveMyNoteToHistory(realId);
+              removeMyNoteFromHistory(tempId);
+              
+              allNotesMap.delete(tempId);
+              renderedDocIds.delete(tempId);
+              allNotesMap.set(realId, noteData);
+              renderedDocIds.add(realId);
+
+              if (element) {
+                element.id = `note-${realId}`;
+                const contentEl = element.querySelector('.sticky-content');
+                if (contentEl) contentEl.id = `content-${realId}`;
+                const editBtn = element.querySelector('.icon-btn-inline[title="編輯"]');
+                const delBtn = element.querySelector('.icon-btn-inline[title="刪除"]');
+                if (editBtn) editBtn.id = `edit-btn-${realId}`;
+                if (delBtn) delBtn.id = `del-btn-${realId}`;
+                const likeBtn = element.querySelector('.like-btn');
+                const likeCount = element.querySelector('span[id^="like-count-"]');
+                if (likeBtn) likeBtn.id = `like-btn-${realId}`;
+                if (likeCount) likeCount.id = `like-count-${realId}`;
+              }
+
+              setTimeout(() => {
+                recentLocalIds.delete(tempId);
+                recentLocalIds.delete(realId);
+              }, 2000);
             }
 
             nicknameInput.value = '';
