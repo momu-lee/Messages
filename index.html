@@ -157,6 +157,114 @@
       background: var(--accent-rose-hover);
     }
 
+    /* ---------------- 階段 1：隱藏的編輯/修改彈窗面板 ---------------- */
+    .input-stage {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100svh;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 4000;
+      background: rgba(247, 242, 239, 0.80);
+      backdrop-filter: blur(12px);
+      padding: 16px;
+    }
+
+    .input-card {
+      position: relative;
+      width: 100%;
+      max-width: 520px;
+      background: #ffffff;
+      border: 1.5px solid #e2d2cc;
+      padding: 28px 24px;
+      border-radius: 24px;
+      box-shadow: 0 25px 50px rgba(139, 90, 82, 0.18);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      color: var(--text-dark);
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      background: transparent;
+      border: none;
+      color: #9c7b74;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .close-btn:hover { color: var(--accent-rose); }
+
+    .input-card h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      text-align: center;
+      color: var(--accent-rose);
+      font-family: var(--main-font);
+      margin-bottom: 4px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+
+    .error-msg {
+      color: var(--error-red);
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 3px;
+      display: none;
+      text-align: left;
+    }
+
+    .input-card input, .input-card textarea {
+      font-family: var(--main-font);
+      width: 100%;
+      background: #faf6f5;
+      border: 1.5px solid #e2d2cc;
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text-dark);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .input-card input:focus, .input-card textarea:focus {
+      border-color: var(--accent-rose);
+      box-shadow: 0 0 0 3px rgba(139, 90, 82, 0.15);
+    }
+
+    .input-card textarea {
+      resize: none;
+      height: 110px;
+    }
+
+    .submit-btn {
+      font-family: var(--main-font);
+      width: 100%;
+      background: var(--accent-rose);
+      color: #ffffff;
+      font-weight: 600;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(139, 90, 82, 0.25);
+      margin-top: 4px;
+    }
+    .submit-btn:hover { background: var(--accent-rose-hover); }
+
     /* ---------------- 階段 2：滾動畫布與電腦/手機獨立背景 ---------------- */
     .viewport {
       width: 100vw;
@@ -244,13 +352,6 @@
                  smoothRiverFlow 12s ease-in-out infinite alternate;
       user-select: none;
       will-change: transform;
-    }
-
-    .sticky-note.new-paste-flash {
-      box-shadow: 0 0 22px rgba(255, 255, 255, 0.95), 0 0 40px rgba(255, 255, 255, 0.7), 0 10px 25px rgba(58, 46, 43, 0.15) !important;
-      border-color: #ffffff !important;
-      z-index: 9999 !important;
-      transition: box-shadow 0.4s ease, border-color 0.4s ease;
     }
 
     @keyframes smoothRiverFlow {
@@ -454,6 +555,31 @@
     </div>
   </div>
 
+  <!-- 編輯專用彈窗（僅管理員解鎖後可使用） -->
+  <div class="input-stage" id="inputStage">
+    <div class="input-card">
+      <button class="close-btn" id="closeBtn">✕</button>
+      <h1 id="inputStageTitle">✏️ 編輯</h1>
+      
+      <div class="field-group">
+        <div class="error-msg" id="nicknameErr">請輸入暱稱!</div>
+        <input type="text" id="nickname" placeholder="暱稱..." />
+      </div>
+
+      <div class="field-group">
+        <div class="error-msg" id="threadsErr">請輸入Threads帳號!</div>
+        <input type="text" id="threads" placeholder="Threads帳號..." maxlength="30" />
+      </div>
+
+      <div class="field-group">
+        <div class="error-msg" id="messageErr">請輸入想說的話!</div>
+        <textarea id="message" placeholder="想說的話..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn">儲存修改</button>
+    </div>
+  </div>
+
   <!-- 2. 滾動畫布 -->
   <div class="viewport" id="viewport">
     <div class="board-stage" id="boardStage"></div>
@@ -480,31 +606,8 @@
   <script type="module">
     let lastHue = null;
     let isAdmin = localStorage.getItem('isAdminUnlocked') === 'true';
+    let editingDocId = null;
     let allNotesMap = new Map();
-
-    function getMyNotesHistory() {
-      try {
-        return JSON.parse(localStorage.getItem('my_sticky_notes') || '{}');
-      } catch (e) {
-        return {};
-      }
-    }
-
-    function removeMyNoteFromHistory(docId) {
-      const history = getMyNotesHistory();
-      delete history[docId];
-      localStorage.setItem('my_sticky_notes', JSON.stringify(history));
-    }
-
-    function isWithinFifteenMinutes(docId) {
-      const history = getMyNotesHistory();
-      const createdTime = history[docId];
-      if (!createdTime) return false;
-
-      const elapsedMs = Date.now() - createdTime;
-      const fifteenMinsMs = 15 * 60 * 1000;
-      return elapsedMs < fifteenMinsMs;
-    }
 
     const adminContainer = document.getElementById('adminContainer');
     const adminToggleBtn = document.getElementById('adminToggleBtn');
@@ -575,24 +678,7 @@
       exportCsvBtn.addEventListener('click', () => {
         exportNotesToCsv();
       });
-
-      setInterval(() => {
-        allNotesMap.forEach((_, id) => {
-          updateNoteInlineUI(id);
-        });
-      }, 15000);
     });
-
-    function updateNoteInlineUI(docId) {
-      const valid = isWithinFifteenMinutes(docId);
-      const editBtn = document.getElementById(`edit-btn-${docId}`);
-      const delBtn = document.getElementById(`del-btn-${docId}`);
-
-      if (!isAdmin && !valid) {
-        if (editBtn) editBtn.style.display = 'none';
-        if (delBtn) delBtn.style.display = 'none';
-      }
-    }
 
     function updateAdminDashboardStats() {
       let totalNotes = allNotesMap.size;
@@ -709,6 +795,18 @@
     }, 100);
 
     function initApp() {
+      const inputStage = document.getElementById('inputStage');
+      const nicknameInput = document.getElementById('nickname');
+      const threadsInput = document.getElementById('threads');
+      const messageInput = document.getElementById('message');
+      
+      const nicknameErr = document.getElementById('nicknameErr');
+      const threadsErr = document.getElementById('threadsErr');
+      const messageErr = document.getElementById('messageErr');
+
+      const submitBtn = document.getElementById('submitBtn');
+      const closeBtn = document.getElementById('closeBtn');
+
       const modalOverlay = document.getElementById('modalOverlay');
       const modalCloseBtn = document.getElementById('modalCloseBtn');
       const modalDeleteBtn = document.getElementById('modalDeleteBtn');
@@ -716,7 +814,36 @@
       const modalLikeBtn = document.getElementById('modalLikeBtn');
       const viewport = document.getElementById('viewport');
 
+      function clearErrors() {
+        nicknameErr.style.display = 'none';
+        threadsErr.style.display = 'none';
+        messageErr.style.display = 'none';
+      }
+
+      function hideInputModal() {
+        inputStage.style.display = 'none';
+        editingDocId = null;
+        clearErrors();
+      }
+
+      function openEditStage(targetDocId) {
+        clearErrors();
+        editingDocId = targetDocId;
+
+        const data = allNotesMap.get(editingDocId);
+        if (data) {
+          nicknameInput.value = data.nickname || '';
+          threadsInput.value = data.threads || '';
+          messageInput.value = data.text || '';
+        }
+
+        inputStage.style.display = 'flex';
+        nicknameInput.focus();
+      }
+
       modalCloseBtn.addEventListener('click', () => { modalOverlay.style.display = 'none'; });
+      closeBtn.addEventListener('click', hideInputModal);
+      
       modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) modalOverlay.style.display = 'none';
       });
@@ -735,12 +862,60 @@
         }
       });
 
+      modalEditBtn.addEventListener('click', () => {
+        const docId = modalEditBtn.dataset.currentId;
+        if (docId) {
+          modalOverlay.style.display = 'none';
+          openEditStage(docId);
+        }
+      });
+
       modalDeleteBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const docId = modalDeleteBtn.dataset.currentId;
         if (docId) {
           modalOverlay.style.display = 'none';
           await deleteNoteFromCloud(docId);
+        }
+      });
+
+      submitBtn.addEventListener('click', async () => {
+        clearErrors();
+        const nickname = nicknameInput.value.trim();
+        const threads = threadsInput.value.trim();
+        const text = messageInput.value.trim();
+
+        let hasError = false;
+        if (!nickname) { nicknameErr.style.display = 'block'; hasError = true; }
+        if (!threads) { threadsErr.style.display = 'block'; hasError = true; }
+        if (!text) { messageErr.style.display = 'block'; hasError = true; }
+        if (hasError) return;
+
+        submitBtn.innerText = "儲存中...";
+        submitBtn.disabled = true;
+
+        try {
+          if (editingDocId && window.db) {
+            const noteRef = window.doc(window.db, "sticky_notes", editingDocId);
+            await window.updateDoc(noteRef, {
+              nickname: nickname,
+              threads: threads,
+              text: text
+            });
+
+            const currentData = allNotesMap.get(editingDocId) || {};
+            currentData.nickname = nickname;
+            currentData.threads = threads;
+            currentData.text = text;
+            allNotesMap.set(editingDocId, currentData);
+
+            hideInputModal();
+          }
+        } catch (err) {
+          console.log("修改失敗：" + err.message);
+        } finally {
+          submitBtn.innerText = "儲存修改";
+          submitBtn.disabled = false;
         }
       });
 
@@ -878,7 +1053,6 @@
           if (change.type === "removed") {
             allNotesMap.delete(docId);
             renderedDocIds.delete(docId);
-            removeMyNoteFromHistory(docId);
 
             const el = document.getElementById(`note-${docId}`);
             if (el) el.remove();
@@ -949,7 +1123,8 @@
       const likesCount = data.likes || 0;
 
       const authorText = (isAdmin && threads) ? `— ${nickname} (@${threads})` : `— ${nickname}`;
-      const canEditDelete = isAdmin || isWithinFifteenMinutes(docId);
+      // 🛠️ 只有當管理員解鎖 (`isAdmin`) 時，卡片上才會顯示刪除按鈕
+      const canEditDelete = isAdmin;
 
       note.innerHTML = `
         <div>
@@ -1025,13 +1200,14 @@
         if(modalEditBtn) modalEditBtn.dataset.currentId = targetId;
         modalLikeBtn.dataset.currentId = targetId;
 
-        const valid = isWithinFifteenMinutes(targetId) || isAdmin;
-        if (valid) {
+        // 🛠️ 只有當管理員解鎖 (`isAdmin`) 時，彈窗內才會顯示編輯與刪除按鈕
+        if (isAdmin) {
           modalDeleteBtn.style.display = 'inline-block';
+          modalEditBtn.style.display = 'inline-block';
         } else {
           modalDeleteBtn.style.display = 'none';
+          modalEditBtn.style.display = 'none';
         }
-        if(modalEditBtn) modalEditBtn.style.display = 'none';
 
         modalOverlay.style.display = 'flex';
       });
@@ -1043,7 +1219,6 @@
       try {
         if (window.deleteDoc && window.doc && window.db) {
           await window.deleteDoc(window.doc(window.db, "sticky_notes", docId));
-          removeMyNoteFromHistory(docId);
         }
       } catch (err) {
         console.log("刪除失敗：" + err.message);
