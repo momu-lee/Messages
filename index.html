@@ -157,7 +157,7 @@
       background: var(--accent-rose-hover);
     }
 
-    /* ---------------- 階段 1：隱藏的編輯/修改彈窗面板 ---------------- */
+    /* ---------------- 管理員專用編輯面板 ---------------- */
     .input-stage {
       position: fixed;
       top: 0;
@@ -1123,7 +1123,7 @@
       const likesCount = data.likes || 0;
 
       const authorText = (isAdmin && threads) ? `— ${nickname} (@${threads})` : `— ${nickname}`;
-      // 🛠️ 只有當管理員解鎖 (`isAdmin`) 時，卡片上才會顯示刪除按鈕
+      // 🛠️ 管理員模式下在卡片左下角顯示編輯與刪除按鈕
       const canEditDelete = isAdmin;
 
       note.innerHTML = `
@@ -1134,6 +1134,7 @@
         <div class="footer-row">
           <div class="author-group">
             <div class="sticky-author" title="${authorText}">${authorText}</div>
+            ${canEditDelete ? `<button class="icon-btn-inline" id="edit-btn-${docId}" title="編輯">✏️</button>` : ''}
             ${canEditDelete ? `<button class="icon-btn-inline" id="del-btn-${docId}" title="刪除">🗑️</button>` : ''}
           </div>
           <button class="like-btn" id="like-btn-${docId}">💗 <span id="like-count-${docId}">${likesCount}</span></button>
@@ -1162,6 +1163,27 @@
           } catch (err) {
             console.log("按讚失敗：" + err.message);
           }
+        });
+      }
+
+      // 卡片上的編輯按鈕
+      const editBtn = note.querySelector('.icon-btn-inline[title="編輯"]');
+      if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetId = note.id.replace('note-', '');
+          const inputStage = document.getElementById('inputStage');
+          const nicknameInput = document.getElementById('nickname');
+          const threadsInput = document.getElementById('threads');
+          const messageInput = document.getElementById('message');
+          
+          editingDocId = targetId;
+          const currentData = allNotesMap.get(targetId) || data;
+          nicknameInput.value = currentData.nickname || '';
+          threadsInput.value = currentData.threads || '';
+          messageInput.value = currentData.text || '';
+          inputStage.style.display = 'flex';
+          nicknameInput.focus();
         });
       }
 
@@ -1203,10 +1225,10 @@
         // 🛠️ 只有當管理員解鎖 (`isAdmin`) 時，彈窗內才會顯示編輯與刪除按鈕
         if (isAdmin) {
           modalDeleteBtn.style.display = 'inline-block';
-          modalEditBtn.style.display = 'inline-block';
+          if(modalEditBtn) modalEditBtn.style.display = 'inline-block';
         } else {
           modalDeleteBtn.style.display = 'none';
-          modalEditBtn.style.display = 'none';
+          if(modalEditBtn) modalEditBtn.style.display = 'none';
         }
 
         modalOverlay.style.display = 'flex';
